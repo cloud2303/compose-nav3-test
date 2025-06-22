@@ -1,6 +1,13 @@
 package com.navtest.navtest
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -36,6 +43,7 @@ import com.example.nav3recipes.content.ContentGreen
 import com.example.nav3recipes.content.ContentPurple
 import com.example.nav3recipes.content.ContentRed
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -52,33 +60,21 @@ private data object RouteA : NavKey
 @Serializable private data class RouteB(val id: String) : NavKey
 
 val tabRoutes = listOf(Home, ChatList, Camera)
+
+@Serializable
+data class User(val name: String, val age: Int)
+
+
 @Composable
 @Preview
 fun App() {
     val backStack = rememberNavBackStack(Home)
     val currentTab = tabRoutes.find { it == backStack.lastOrNull() } ?: Home
-//    MaterialTheme {
-//        NavDisplay(
-//            backStack = backStack,
-//            onBack = { backStack.removeLastOrNull() },
-//            entryProvider = entryProvider {
-//                entry<RouteA> {
-//
-//                    ContentGreen("Welcome to Nav3") {
-//                        Button(onClick = {
-//                            backStack.add(RouteB("123"))
-//                        }) {
-//                            Text("Click to navigate")
-//                        }
-//                    }
-//                }
-//
-//                entry<RouteB> { key ->
-//                    ContentBlue("Route id: ${key.id} ")
-//                }
-//            }
-//        )
-//    }
+  LaunchedEffect(currentTab) {
+      val user = User(name = "Alice", age = 28)
+      val jsonString = Json.encodeToString(user)
+      Log.d("NAV3",jsonString)
+  }
 
 
     NavDisplay(
@@ -123,7 +119,29 @@ fun App() {
             }
 
             // 非 TAB 层
-            entry<ChatDetail> {
+            entry<ChatDetail>(
+                metadata = NavDisplay.transitionSpec {
+                    // Slide new content up, keeping the old content in place underneath
+                    slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(300)
+                    ) togetherWith ExitTransition.KeepUntilTransitionsFinished
+                } + NavDisplay.popTransitionSpec {
+                    // Slide old content down, revealing the new content in place underneath
+                    EnterTransition.None togetherWith
+                            slideOutVertically(
+                                targetOffsetY = { it },
+                                animationSpec = tween(300)
+                            )
+                } + NavDisplay.predictivePopTransitionSpec {
+                    // Slide old content down, revealing the new content in place underneath
+                    EnterTransition.None togetherWith
+                            slideOutVertically(
+                                targetOffsetY = { it },
+                                animationSpec = tween(300)
+                            )
+                }
+            ) {
                 ContentBlue("Chat Detail")
             }
 
